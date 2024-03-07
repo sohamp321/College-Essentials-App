@@ -1,4 +1,7 @@
+import 'package:file_picker/file_picker.dart';
 import 'package:flutter/material.dart';
+import 'package:shared_preferences/shared_preferences.dart';
+import 'dart:io';
 
 class HomeScreen extends StatefulWidget {
   const HomeScreen({super.key});
@@ -8,66 +11,74 @@ class HomeScreen extends StatefulWidget {
 }
 
 class _HomeScreenState extends State<HomeScreen> {
-  String? dropDownValue;
-  
+  ImageProvider qrCode = const AssetImage('assets/images/sample-qr.png');
+
+  Future<void> pickImage() async {
+    FilePickerResult? result = await FilePicker.platform.pickFiles(
+      type: FileType.custom,
+      allowedExtensions: ['png'],
+    );
+    if (result != null) {
+      File file = File(result.files.single.path!);
+
+      final prefs = await SharedPreferences.getInstance();
+      await prefs.setString('imagePath', result.files.single.path!);
+
+      setState(() {
+        qrCode = FileImage(file);
+      });
+    } else {}
+  }
+
+  @override
+  void initState() {
+    super.initState();
+    loadImageFromPrefs();
+  }
+
+  Future<void> loadImageFromPrefs() async {
+    final prefs = await SharedPreferences.getInstance();
+    final String? imagePath = prefs.getString('imagePath');
+    if (imagePath != null) {
+      setState(() {
+        qrCode = FileImage(File(imagePath));
+      });
+    }
+  }
+
   @override
   Widget build(BuildContext context) {
     return SingleChildScrollView(
-      child: 
-      Column(
-            mainAxisAlignment: MainAxisAlignment.start,
+      child: Column(
+        mainAxisAlignment: MainAxisAlignment.start,
+        children: [
+          Row(
+            mainAxisAlignment: MainAxisAlignment.end,
             children: [
-              Align(
-                alignment: Alignment.centerLeft,
-                child: DropdownButton<String>(
-                  padding: EdgeInsets.only(left:   10),
-                  itemHeight:   50,
-                  value: dropDownValue,
-                  hint: Text("Select the person"),
-                  onChanged: (String? newValue) {
-                    setState(() {
-                      dropDownValue = newValue;
-                    });
-                  },
-                  items: <String>['Drishti', 'Soham']
-                      .map<DropdownMenuItem<String>>((String value) {
-                    return DropdownMenuItem<String>(
-                        value: value, child: Text(value));
-                  }).toList(),
-                ),
+              Padding(
+                padding: const EdgeInsets.all(8.0),
+                child: ElevatedButton(
+                    onPressed: () async {
+                      pickImage();
+                    },
+                    child: const Text("Upload QR")),
               ),
-              if (dropDownValue == 'Drishti') ...[
-                Padding(padding: EdgeInsets.all(20)),
-                Center(
-                  child: Column(
-                    children: [
-                      Image(
-                        image: AssetImage('images/drishti_qr.png'),
-                        height:   400,
-                        width:   400,
-                      ),
-                      MediaQuery(data: MediaQuery.of(context).copyWith(textScaleFactor:  1),child: Text("Please scan your QR !!" , style: TextStyle(fontSize:  25 , color: Colors.purple[500] , fontWeight: FontWeight.bold),))
-                    ],
-                  ),
-                ),
-              ],
-              if (dropDownValue == 'Soham') ...[
-                Padding(padding: EdgeInsets.all(20)),
-                Center(
-                  child: Column(
-                    children: [
-                      Image(
-                        image: AssetImage('images/soham_qr.jpeg'), // Replace with the correct image path for Soham
-                        height:   400,
-                        width:   400,
-                      ),
-                      MediaQuery(data: MediaQuery.of(context).copyWith(textScaleFactor:  1),child: Text("Please scan your QR !!" , style: TextStyle(fontSize:  25 , color: Colors.purple[500] , fontWeight: FontWeight.bold),))
-                    ],
-                  ),
-                ),
-              ]
             ],
           ),
+          const Padding(padding: EdgeInsets.all(20)),
+          Center(
+            child: Container(
+                padding: const EdgeInsets.all(15.0),
+
+                decoration: BoxDecoration(
+                  borderRadius: BorderRadius.circular(10.0),
+                  color: Colors.white.withOpacity(0.5),
+
+                ),
+                child: Image(image: qrCode)),
+          ),
+        ],
+      ),
     );
   }
 }
